@@ -60,4 +60,9 @@ jobs:
         working-directory: ./frontend
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: firebase deploy --only hosting --project project-p-507510
+        run: |
+          if [ -f "firebase.json" ]; then
+            firebase deploy --only hosting --project project-p-507510
+          else
+            firebase deploy --only hosting --config ../firebase.json --project project-p-507510
+          fi
