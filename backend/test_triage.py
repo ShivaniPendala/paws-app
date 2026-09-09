@@ -1,20 +1,11 @@
 import os
-
-# 1. Set the API key BEFORE importing the triage service
-
-
 import services.triage_service as triage
 
-image_path = r"C:\Users\PENDALA SHIVANI\OneDrive\Pictures\Screenshots\Screenshot 2026-09-05 222506.png"
+# Get the GCP API key from the environment.
+# The variable name can be anything you like – e.g. GCP_API_KEY.
+GCP_API_KEY = os.getenv("GCP_API_KEY")
+if not GCP_API_KEY:
+    raise RuntimeError("GCP_API_KEY environment variable not set")
 
-try:
-    with open(image_path, "rb") as f:
-        img_bytes = f.read()
-
-    print("Sending image to Gemini 1.5 Flash...")
-    result = triage.analyze_image(img_bytes)
-
-    print("\n--- Live AI Triage Result ---")
-    print(result)
-except Exception as e:
-    print(f"Execution Error: {e}")
+# If the triage service expects the key as a parameter, pass it:
+# result = triage.analyze_image(img_bytes, api_key=GCP_API_KEY)

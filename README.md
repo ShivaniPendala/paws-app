@@ -56,3 +56,9 @@ uvicorn backend.main:app --reload --port 8080
 ## Notes
 - The triage and image-compare functions include safe fallbacks when Vertex API keys are not configured.
 - Review and adapt `backend/services/triage_service.py` to the exact Vertex AI SDK and response shape you choose.
+
+---
+
+# paws-app
+PAWS (Predictive Animal Welfare System) is a modern PWA for real-time stray animal emergency reporting, multimodal Gemini AI injury triage, 1km spatial deduplication, community dog registry management (3km radius), and interactive NGO rescue dispatching. Built with React (Vite/Tailwind), FastAPI, Google Maps API, and Cloud Firestore.
+
