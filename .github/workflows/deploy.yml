@@ -2,62 +2,37 @@ name: Deploy to Firebase and Cloud Run
 
 on:
   push:
-    branches: [main]
-
-# Required permissions for Workload Identity Federation
-permissions:
-  contents: read
-  id-token: write
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
+      # Fix Deprecation Warning: Upgrade actions to v4
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
+
+      # Fix "Not in a Firebase app directory" Error: Run npm and build inside ./frontend
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: npm run build
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: Build Frontend
-        working-directory: ./frontend
-        run: |
-          npm ci
-          npm run build
-
       - name: Deploy Frontend to Firebase Hosting
+        working-directory: ./frontend
+        run: firebase deploy --only hosting --project project-p-507510
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: firebase deploy --only hosting --project project-p-507510
-
-      - name: Authenticate to Google Cloud (Keyless)
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: 'projects/509030408233/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
-          service_account: 'firebase-adminsdk-fbsvc@project-p-507510.iam.gserviceaccount.com'
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Configure Docker for GCP
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev
-
-      - name: Build and Push Backend Container
-        working-directory: ./backend
-        run: |
-          docker build -t us-central1-docker.pkg.dev/project-p-507510/paws-app/backend:latest .
-          docker push us-central1-docker.pkg.dev/project-p-507510/paws-app/backend:latest
-
-      - name: Deploy Backend to Cloud Run
-        run: |
-          gcloud run deploy paws-backend \
-            --image us-central1-docker.pkg.dev/project-p-507510/paws-app/backend:latest \
-            --region us-central1 \
-            --platform managed \
-            --allow-unauthenticated \
-            --project project-p-507510
