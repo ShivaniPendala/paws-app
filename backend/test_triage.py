@@ -1,7 +1,7 @@
 import os
 
 # 1. Set the API key BEFORE importing the triage service
-os.environ["GOOGLE_API_KEY"] = "AQ.Ab8RN6L-18dIq4j5Un_I8EKXfBjKfT3h97yoVR39m_tMqObQpQ"
+
 
 import services.triage_service as triage
 
