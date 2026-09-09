@@ -29,8 +29,7 @@ jobs:
           npm ci
           npm run build
 
-      # 1. AUTHENTICATE TO GCP FIRST
-      - name: Authenticate to Google Cloud (Keyless)
+      - name: Authenticate to Google Cloud (Keyless WIF)
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: 'projects/509030408233/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
@@ -42,7 +41,6 @@ jobs:
       - name: Configure Docker for GCP
         run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
-      # 2. BUILD & DEPLOY BACKEND TO CLOUD RUN FIRST
       - name: Build and Push Backend Container
         working-directory: ./backend
         run: |
@@ -58,8 +56,8 @@ jobs:
             --allow-unauthenticated \
             --project project-p-507510
 
-      # 3. DEPLOY FRONTEND TO FIREBASE HOSTING LAST
       - name: Deploy Frontend to Firebase Hosting
+        working-directory: ./frontend
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: firebase deploy --only hosting --project project-p-507510
