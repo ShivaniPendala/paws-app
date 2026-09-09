@@ -1,0 +1,14 @@
+.env
+*.env
+**/.env
+backend/.env
+backend/serviceAccountKey.json
+serviceAccountKey.json
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+.env.local

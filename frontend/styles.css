@@ -1,0 +1,52 @@
+/* Warm Guardian palette */
+:root{
+  --guardian-teal: #00695C;
+  --rescue-amber: #E65100;
+  --warm-cream: #FDFBF7;
+  --surface-white: #FFFFFF;
+  --deep-slate: #2C3E50;
+  --hope-green: #2E7D32;
+  --urgent-coral: #D32F2F;
+
+  --max-width: 1100px;
+}
+
+*{box-sizing:border-box}
+body{font-family:system-ui,Segoe UI,Roboto,Arial; margin:0; background:var(--warm-cream); color:var(--deep-slate)}
+
+.app-container{display:flex;flex-direction:column;gap:1rem;padding:1rem;max-width:var(--max-width);margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between}
+.topbar h1{color:var(--guardian-teal);margin:0}
+.tagline{margin:0;color:rgba(44,62,80,0.8)}
+
+.reporter{background:var(--surface-white);padding:1rem;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.06)}
+.reporter label{display:block;margin-bottom:.75rem}
+.flags label{display:inline-block;margin-right:1rem}
+.primary{background:var(--guardian-teal);color:#fff;border:none;padding:.6rem 1rem;border-radius:6px}
+
+.dashboard{display:block;min-width:0}
+.dashboard-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.dashboard-heading h2{margin:.1rem 0 .75rem}
+.eyebrow{margin:0;color:var(--rescue-amber);font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.status-text{color:rgba(44,62,80,0.7);font-size:.85rem;text-align:right}
+.map{height:360px;border-radius:8px;background:#e8eeeb;overflow:hidden;margin-bottom:1rem}
+.analysis-card{padding:1rem;background:#f4f8f5;border-left:4px solid var(--guardian-teal);border-radius:6px;margin-bottom:.75rem}
+.analysis-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.analysis-heading h3{margin:0}
+.injury-score{font-size:1.25rem;color:var(--urgent-coral)}
+.analysis-card p{margin:.6rem 0 0}
+.analysis-meta{font-size:.9rem;color:rgba(44,62,80,0.8)}
+.candidate-card{display:flex;align-items:center;gap:.75rem;padding:.5rem;border:1px solid #eee;border-radius:6px;margin-bottom:.5rem}
+
+/* Responsive split view for larger screens */
+@media (min-width: 768px){
+  .app-container{flex-direction:row}
+  .reporter{flex:1}
+  .dashboard{flex:1}
+}
+
+/* Modal */
+.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4)}
+.modal.hidden{display:none}
+.modal-content{background:var(--surface-white);padding:1rem;border-radius:8px;min-width:280px}
+.modal-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem}
