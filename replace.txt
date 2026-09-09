@@ -1,0 +1,2 @@
+regex: AIza[0-9A-Za-z_-]{35}
+replacement: <REDACTED_GCP_API_KEY>
