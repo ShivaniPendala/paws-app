@@ -56,6 +56,7 @@ def _trait_match_score(current_triage: dict, candidate: dict) -> float:
         score += 0.65 * len(current_marks & previous_marks) / max(len(current_marks | previous_marks), 1)
     return min(score, 1.0)
 
+
 def _load_local_env_file() -> None:
     """Load `backend/.env` into the process environment for local development."""
     try:
@@ -127,13 +128,22 @@ async def _require_verified_ngo(authorization: Optional[str] = Header(None, alia
 # Load local .env file immediately
 _load_local_env_file()
 
+# Production CORS configuration
+origins = [
+    "https://project-p-507510.web.app",
+    "https://project-p-507510.firebaseapp.com",
+    "http://localhost:3000",
+    "http://localhost:5173",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 class ProcessResponse(BaseModel):
     status: str
@@ -165,6 +175,7 @@ class MatchConfirmation(BaseModel):
     lat: float
     lng: float
 
+
 @app.get("/api/config/maps")
 async def get_maps_config():
     """Provide the Maps browser key without storing it in frontend source."""
@@ -172,6 +183,7 @@ async def get_maps_config():
     if not maps_api_key:
         raise HTTPException(status_code=503, detail="Google Maps is not configured")
     return {"api_key": maps_api_key}
+
 
 @app.get("/api/incidents/nearby")
 async def get_nearby_incidents(
@@ -270,6 +282,7 @@ async def confirm_match(incident_id: str, payload: MatchConfirmation):
     except Exception as exc:
         raise HTTPException(status_code=404, detail="Matching incident not found") from exc
 
+
 @app.post("/api/report/process", response_model=ProcessResponse)
 async def process_report(
     image: UploadFile = File(...),
@@ -291,7 +304,7 @@ async def process_report(
         logger.exception("Failed reading uploaded image")
         raise HTTPException(status_code=400, detail="Invalid image upload")
 
-    # 1) Triage analysis (Gemini API with Heuristic Fallback)
+    # 1) Triage analysis
     try:
         triage = await asyncio.wait_for(
             asyncio.to_thread(triage_service.analyze_image, image_bytes, user_notes or ""),
@@ -307,7 +320,7 @@ async def process_report(
         }
     injury_score = int(triage.get("injury_score", 0))
 
-    # 2) Spatial deduplication: Safe query wrapper
+    # 2) Spatial deduplication
     try:
         candidates = await asyncio.wait_for(
             asyncio.to_thread(firestore_service.get_active_incidents_nearby, lat, lng, 1.0),
@@ -317,7 +330,7 @@ async def process_report(
         logger.warning(f"Firestore query skipped due to billing or network error: {exc}")
         candidates = _local_nearby(LOCAL_INCIDENTS, lat, lng, 1.0)
 
-    # 3) Process Candidate Comparison if candidates exist
+    # 3) Process Candidate Comparison
     best_match = None
     best_confidence = 0.0
     if candidates and not ignore_match:
