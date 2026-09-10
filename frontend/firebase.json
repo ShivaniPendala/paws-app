@@ -1,19 +1,13 @@
 {
   "hosting": {
-    "public": "dist",
+    "site": "project-p-507510",
+    "public": "frontend/dist",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
     "rewrites": [
-      {
-        "source": "/api/**",
-        "run": {
-          "serviceId": "paws-backend",
-          "region": "us-central1"
-        }
-      },
       {
         "source": "**",
         "destination": "/index.html"

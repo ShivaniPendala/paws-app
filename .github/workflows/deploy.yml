@@ -1,68 +1,72 @@
-name: Deploy to Firebase and Cloud Run
+name: Deploy PAWS Application to Google Cloud & Firebase
 
 on:
   push:
-    branches: [main]
-
-permissions:
-  contents: read
-  id-token: write
+    branches:
+      - main
 
 jobs:
-  build:
+  deploy-backend:
+    name: Build & Deploy FastAPI Backend to Cloud Run
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Firebase CLI
-        run: npm install -g firebase-tools
-
-      - name: Build Frontend
-        working-directory: ./frontend
-        run: |
-          npm ci
-          npm run build
-
-      - name: Authenticate to Google Cloud (Keyless WIF)
+      - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: 'projects/509030408233/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
-          service_account: 'firebase-adminsdk-fbsvc@project-p-507510.iam.gserviceaccount.com'
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker for GCP
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+      - name: Configure Docker for GCP Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-      - name: Build and Push Backend Container
-        working-directory: ./backend
+      - name: Build and Push Docker Image
         run: |
-          docker build -t us-central1-docker.pkg.dev/project-p-507510/paws-app/backend:latest .
-          docker push us-central1-docker.pkg.dev/project-p-507510/paws-app/backend:latest
-
-      - name: Deploy Backend to Cloud Run
-        run: |
+          IMAGE_URI="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/paws-repo/paws-backend:${{ github.sha }}"
+          docker build -t $IMAGE_URI ./backend
+          docker push $IMAGE_URI
+          
+          # Deploy to Cloud Run
           gcloud run deploy paws-backend \
-            --image us-central1-docker.pkg.dev/project-p-507510/paws-app/backend:latest \
-            --region us-central1 \
-            --platform managed \
-            --allow-unauthenticated \
-            --project project-p-507510
+            --image=$IMAGE_URI \
+            --region=us-central1 \
+            --platform=managed \
+            --allow-unauthenticated
 
-      - name: Deploy Frontend to Firebase Hosting
+  deploy-frontend:
+    name: Build & Deploy React Frontend to Firebase Hosting
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build Frontend Assets
         working-directory: ./frontend
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy to Firebase Hosting
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          if [ -f "firebase.json" ]; then
-            firebase deploy --only hosting --project project-p-507510
-          else
-            firebase deploy --only hosting --config ../firebase.json --project project-p-507510
-          fi
+          npx firebase-tools deploy --only hosting:project-p-507510 --project project-p-507510
