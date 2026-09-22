@@ -4,6 +4,7 @@
 *.env
 **/.env
 backend/.env
+frontend/.env
 backend/serviceAccountKey.json
 serviceAccountKey.json
 .venv/
