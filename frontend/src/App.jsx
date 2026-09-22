@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Activity, AlertTriangle, Bell, CheckCircle2, ChevronRight, Crosshair, Dog, FileHeart, HeartPulse, Home, LogIn, MapPinned, Menu, PawPrint, Plus, ShieldCheck, Siren, Stethoscope, UserRound, X } from 'lucide-react';
 import { createCommunityDog, getCommunityDogs, getIncidents, submitReport, updateIncident } from './services/api';
-import { auth, firebaseConfigured, getVerifiedRole, logOut, observeAuth, signIn, signInWithGoogle, signUp } from './services/auth';
+import { auth, firebaseConfigured, getVerifiedRole, logOut, observeAuth, signIn, signInWithGoogle, signUp, usingAuthEmulator } from './services/auth';
 import TriageResultModal from './components/TriageResultModal';
 import LocationPicker from './components/LocationPicker';
 import WelfareMap from './components/WelfareMap';
@@ -173,7 +173,7 @@ function LoginPage({ onLoggedIn }) {
         <button className="button button-primary full" type="submit" disabled={busy || !firebaseConfigured}>{busy ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}</button>
       </form>
       <div className="divider"><span>or</span></div>
-      <button className="button button-dark full" type="button" onClick={handleGoogle} disabled={busy || !firebaseConfigured}><LogIn size={16} />Continue with Google</button>
+      <button className="button button-dark full" type="button" onClick={handleGoogle} disabled={busy || !firebaseConfigured || usingAuthEmulator}><LogIn size={16} />{usingAuthEmulator ? 'Google sign-in unavailable locally' : 'Continue with Google'}</button>
     </div>
   </div>;
 }

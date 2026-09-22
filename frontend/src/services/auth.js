@@ -1,5 +1,5 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
+import { connectAuthEmulator, getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,6 +13,8 @@ const firebaseConfig = {
 export const firebaseConfigured = Object.values(firebaseConfig).every(Boolean);
 const app = firebaseConfigured ? (getApps().length ? getApp() : initializeApp(firebaseConfig)) : null;
 export const auth = app ? getAuth(app) : null;
+export const usingAuthEmulator = import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true';
+if (auth && usingAuthEmulator) connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
 const googleProvider = new GoogleAuthProvider();
 
 export function observeAuth(callback) {

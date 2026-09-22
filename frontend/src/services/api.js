@@ -1,9 +1,14 @@
 import { auth } from './auth';
 
-const BACKEND_BASE = import.meta.env.VITE_BACKEND_BASE || 'http://localhost:8000';
+const BACKEND_BASE = import.meta.env.VITE_BACKEND_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 async function request(path, options = {}) {
-  const response = await fetch(`${BACKEND_BASE}${path}`, options);
+  let response;
+  try {
+    response = await fetch(`${BACKEND_BASE}${path}`, options);
+  } catch {
+    throw new Error('Cannot reach the PAWS API. Start the local backend and try again.');
+  }
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.detail || body.message || `Request failed (${response.status})`);
   return body;

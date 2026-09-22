@@ -9,6 +9,7 @@ from firebase_admin import auth as firebase_auth, credentials
 from fastapi import Depends, FastAPI, File, UploadFile, Form, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from google.auth.credentials import AnonymousCredentials
 
 try:
     from .services import triage_service, spatial_service, firestore_service
@@ -82,11 +83,21 @@ def _load_local_env_file() -> None:
 def _initialize_firebase_admin() -> None:
     if firebase_admin._apps:
         return
+    project_id = (
+        os.environ.get("FIREBASE_PROJECT_ID")
+        or os.environ.get("GCP_PROJECT")
+        or os.environ.get("GOOGLE_CLOUD_PROJECT")
+        or "project-p-507510"
+    )
+    options = {"projectId": project_id}
+    if os.environ.get("FIREBASE_AUTH_EMULATOR_HOST"):
+        firebase_admin.initialize_app(AnonymousCredentials(), options)
+        return
     cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     if cred_path and os.path.exists(cred_path):
-        firebase_admin.initialize_app(credentials.Certificate(cred_path))
+        firebase_admin.initialize_app(credentials.Certificate(cred_path), options)
         return
-    firebase_admin.initialize_app()
+    firebase_admin.initialize_app(options=options)
 
 
 async def _require_firebase_user(authorization: Optional[str] = Header(None, alias="Authorization")) -> str:
@@ -134,6 +145,7 @@ origins = [
     "https://project-p-507510.firebaseapp.com",
     "http://localhost:3000",
     "http://localhost:5173",
+    "http://localhost:5174",
 ]
 
 app.add_middleware(
