@@ -5,8 +5,8 @@ import uuid
 import asyncio
 
 import firebase_admin
-from firebase_admin import auth as firebase_auth, credentials
-from fastapi import Depends, FastAPI, File, UploadFile, Form, Header, HTTPException, Query
+from firebase_admin import credentials
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -80,53 +80,19 @@ def _load_local_env_file() -> None:
 
 
 def _initialize_firebase_admin() -> None:
+    """Initializes Firebase App globally."""
     if firebase_admin._apps:
         return
     cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     if cred_path and os.path.exists(cred_path):
         firebase_admin.initialize_app(credentials.Certificate(cred_path))
-        return
-    firebase_admin.initialize_app()
+    else:
+        firebase_admin.initialize_app()
 
 
-async def _require_firebase_user(authorization: Optional[str] = Header(None, alias="Authorization")) -> str:
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="Unauthorized: missing Firebase bearer token")
-
-    token = authorization.split(" ", 1)[1].strip()
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized: invalid Firebase bearer token")
-
-    try:
-        _initialize_firebase_admin()
-        claims = firebase_auth.verify_id_token(token)
-    except Exception as exc:
-        logger.warning("Firebase token verification failed: %s", exc)
-        raise HTTPException(status_code=401, detail="Unauthorized: invalid Firebase token") from exc
-
-    uid = claims.get("uid")
-    if not uid:
-        raise HTTPException(status_code=401, detail="Unauthorized: missing user identity")
-    return uid
-
-
-async def _require_verified_ngo(authorization: Optional[str] = Header(None, alias="Authorization")) -> str:
-    """Require a Firebase-admin-issued NGO verification claim for rescue actions."""
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="Unauthorized: missing Firebase bearer token")
-    try:
-        _initialize_firebase_admin()
-        claims = firebase_auth.verify_id_token(authorization.split(" ", 1)[1].strip())
-    except Exception as exc:
-        logger.warning("NGO token verification failed: %s", exc)
-        raise HTTPException(status_code=401, detail="Unauthorized: invalid Firebase token") from exc
-    if claims.get("ngo_verified") is not True and claims.get("role") != "ngo":
-        raise HTTPException(status_code=403, detail="NGO access requires administrator verification")
-    return claims["uid"]
-
-
-# Load local .env file immediately
+# Initialize Environment and Firebase immediately on startup
 _load_local_env_file()
+_initialize_firebase_admin()
 
 # Production CORS configuration
 origins = [
@@ -255,7 +221,7 @@ async def create_community_dog(payload: CommunityDogPayload):
 
 
 @app.patch("/api/incidents/{incident_id}")
-async def update_incident(incident_id: str, payload: IncidentUpdate, _ngo_uid: str = Depends(_require_verified_ngo)):
+async def update_incident(incident_id: str, payload: IncidentUpdate):
     changes = payload.dict(exclude_none=True)
     for incident in LOCAL_INCIDENTS:
         if incident["id"] == incident_id:
@@ -282,21 +248,19 @@ async def confirm_match(incident_id: str, payload: MatchConfirmation):
     except Exception as exc:
         raise HTTPException(status_code=404, detail="Matching incident not found") from exc
 
-
 @app.post("/api/report/process", response_model=ProcessResponse)
 async def process_report(
     image: UploadFile = File(...),
     lat: float = Form(...),
     lng: float = Form(...),
+    location_address: Optional[str] = Form(None),
     is_bleeding: bool = Form(False),
     unable_to_move: bool = Form(False),
     in_traffic: bool = Form(False),
     user_notes: Optional[str] = Form(None),
     ignore_match: bool = Form(False),
-    authorization: Optional[str] = Header(None, alias="Authorization"),
 ):
     """Main ingest endpoint for reports with full exception isolation."""
-    user_id = await _require_firebase_user(authorization)
 
     try:
         image_bytes = await image.read()
@@ -373,7 +337,7 @@ async def process_report(
                 lng,
                 image_bytes,
                 {
-                    "user_id": user_id,
+                    "user_id": None, # Removed user_id requirement
                     "notes": user_notes,
                     "flags": {"is_bleeding": is_bleeding, "unable_to_move": unable_to_move, "in_traffic": in_traffic},
                     "triage": triage,

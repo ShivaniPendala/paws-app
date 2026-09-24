@@ -12,16 +12,34 @@ async function request(path, options = {}) {
 export async function submitReport({ file, location, flags, notes, ignoreMatch = false, user }) {
   const currentUser = user || auth?.currentUser;
   if (!currentUser) throw new Error('Sign in before submitting a report.');
+  
   const token = await currentUser.getIdToken();
   const form = new FormData();
+  
   form.append('image', file, file.name || 'report.jpg');
   form.append('lat', String(location.lat));
   form.append('lng', String(location.lng));
+  
+  // NOTE: Ensure your main.py is updated to accept this field!
   if (location.address) form.append('location_address', location.address);
-  Object.entries(flags).forEach(([key, value]) => form.append(key, String(value)));
-  form.append('user_notes', notes);
+  
+  // Prevent sending the literal string "undefined" to the backend
+  if (notes) form.append('user_notes', notes);
+  
   form.append('ignore_match', String(ignoreMatch));
-  return request('/api/report/process', { method: 'POST', body: form, headers: { Authorization: `Bearer ${token}` } });
+  
+  // Safely append boolean flags (FastAPI understands "true"/"false" strings)
+  if (flags) {
+    Object.entries(flags).forEach(([key, value]) => {
+      form.append(key, String(value));
+    });
+  }
+  
+  return request('/api/report/process', { 
+    method: 'POST', 
+    body: form, 
+    headers: { Authorization: `Bearer ${token}` } 
+  });
 }
 
 export function getIncidents(location, radius = 25) {
